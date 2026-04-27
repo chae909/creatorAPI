@@ -5,7 +5,9 @@
       "Bash(git *)",
       "Bash(./gradlew test *)",
       "PowerShell(gradle *)",
-      "Bash(.\\\\gradlew.bat build *)"
+      "Bash(.\\\\gradlew.bat clean *)",
+      "Bash(cmd *)",
+      "PowerShell(.\\\\gradlew.bat clean test 2>&1)"
     ]
   }
 }

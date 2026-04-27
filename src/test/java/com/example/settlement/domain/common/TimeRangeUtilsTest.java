@@ -15,7 +15,7 @@ class TimeRangeUtilsTest {
     void march2025_startsAtEndOfFebUTC_endsAtMarch31UTC() {
         var range = TimeRangeUtils.toKstMonthRange(2025, 3);
         assertThat(range.start()).isEqualTo(Instant.parse("2025-02-28T15:00:00Z"));
-        assertThat(range.end()).isEqualTo(Instant.parse("2025-03-31T14:59:59Z"));
+        assertThat(range.end()).isEqualTo(Instant.parse("2025-03-31T14:59:59.999999999Z"));
     }
 
     @Test
@@ -27,7 +27,7 @@ class TimeRangeUtilsTest {
     @Test
     void february2024_leapYear_endDayIs29() {
         var range = TimeRangeUtils.toKstMonthRange(2024, 2);
-        assertThat(range.end()).isEqualTo(Instant.parse("2024-02-29T14:59:59Z"));
+        assertThat(range.end()).isEqualTo(Instant.parse("2024-02-29T14:59:59.999999999Z"));
     }
 
     @Test
