@@ -1,5 +1,7 @@
 package com.example.settlement.domain.settlement;
 
+import com.example.settlement.domain.common.exception.BusinessException;
+import com.example.settlement.domain.common.exception.ErrorCode;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -84,12 +86,16 @@ public class Settlement {
     }
 
     public void confirm(Instant now) {
+        if (this.status != SettlementStatus.PENDING)
+            throw new BusinessException(ErrorCode.INVALID_STATUS_TRANSITION);
         this.status = status.next();
         this.confirmedAt = now;
         this.updatedAt = now;
     }
 
     public void pay(Instant now) {
+        if (this.status != SettlementStatus.CONFIRMED)
+            throw new BusinessException(ErrorCode.INVALID_STATUS_TRANSITION);
         this.status = status.next();
         this.paidAt = now;
         this.updatedAt = now;

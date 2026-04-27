@@ -27,7 +27,7 @@ public final class SettlementCalculator {
         long netSales = totalSales - totalRefunds;
         long feeAmount = BigDecimal.valueOf(netSales)
                 .multiply(feeRate)
-                .setScale(0, RoundingMode.FLOOR)
+                .setScale(0, RoundingMode.DOWN)
                 .longValue();
         long payoutAmount = netSales - feeAmount;
         return new SettlementResult(totalSales, totalRefunds, netSales, feeAmount, payoutAmount,

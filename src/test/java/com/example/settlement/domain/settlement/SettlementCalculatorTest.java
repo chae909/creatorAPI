@@ -80,13 +80,31 @@ class SettlementCalculatorTest {
     }
 
     @Test
-    void fifteenPercentFeeRate_floorRoundingApplied() {
-        // 100001 * 0.15 = 15000.15 → floor → 15000
+    void fifteenPercentFeeRate_downRoundingApplied() {
+        // 100001 * 0.15 = 15000.15 → down → 15000
         var sales = List.of(sale("s1", 100001L));
 
         var result = SettlementCalculator.calculate(sales, List.of(), RATE_15);
 
         assertThat(result.feeAmount()).isEqualTo(15000L);
         assertThat(result.payoutAmount()).isEqualTo(85001L);
+    }
+
+    @Test
+    void negativeNetSales_downRoundingTowardZero_notFloor() {
+        // netSales = 50000 - 80001 = -30001
+        // -30001 * 0.2 = -6000.2
+        // DOWN (toward zero) → -6000   (correct: creator owes less fee on a net loss)
+        // FLOOR (toward -∞) → -6001   (wrong: would over-deduct fee)
+        var sales = List.of(sale("s1", 50000L));
+        var cancels = List.of(cancel("c1", "s1", 80001L));
+
+        var result = SettlementCalculator.calculate(sales, cancels, RATE_20);
+
+        assertThat(result.totalSales()).isEqualTo(50000L);
+        assertThat(result.totalRefunds()).isEqualTo(80001L);
+        assertThat(result.netSales()).isEqualTo(-30001L);
+        assertThat(result.feeAmount()).isEqualTo(-6000L);   // DOWN, not FLOOR (-6001)
+        assertThat(result.payoutAmount()).isEqualTo(-24001L);
     }
 }
