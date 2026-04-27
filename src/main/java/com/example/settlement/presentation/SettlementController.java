@@ -2,13 +2,17 @@ package com.example.settlement.presentation;
 
 import com.example.settlement.application.settlement.SettlementUseCase;
 import com.example.settlement.presentation.common.ApiResponse;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
 
 @RestController
+@Validated
 public class SettlementController {
 
     private final SettlementUseCase settlementUseCase;
@@ -19,32 +23,37 @@ public class SettlementController {
         this.csvExportService = csvExportService;
     }
 
+    private static final String YEAR_MONTH_PATTERN = "^\\d{4}-(0[1-9]|1[0-2])$";
+    private static final String YEAR_MONTH_MESSAGE = "연월 형식이 올바르지 않습니다. (예: 2025-03)";
+    private static final String DATE_PATTERN = "^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])$";
+    private static final String DATE_MESSAGE = "날짜 형식이 올바르지 않습니다. (예: 2025-03-01)";
+
     @GetMapping("/api/settlements/monthly")
     public ResponseEntity<ApiResponse<SettlementUseCase.MonthlySettlementResponse>> getMonthly(
-            @RequestParam String creatorId,
-            @RequestParam String yearMonth) {
+            @RequestParam @NotBlank(message = "크리에이터 ID는 필수입니다.") String creatorId,
+            @RequestParam @Pattern(regexp = YEAR_MONTH_PATTERN, message = YEAR_MONTH_MESSAGE) String yearMonth) {
         var query = new SettlementUseCase.MonthlySettlementQuery(creatorId, yearMonth);
         return ResponseEntity.ok(ApiResponse.ok(settlementUseCase.getMonthly(query)));
     }
 
     @PostMapping("/api/settlements/confirm")
     public ResponseEntity<ApiResponse<SettlementUseCase.MonthlySettlementResponse>> confirm(
-            @RequestParam String creatorId,
-            @RequestParam String yearMonth) {
+            @RequestParam @NotBlank(message = "크리에이터 ID는 필수입니다.") String creatorId,
+            @RequestParam @Pattern(regexp = YEAR_MONTH_PATTERN, message = YEAR_MONTH_MESSAGE) String yearMonth) {
         return ResponseEntity.ok(ApiResponse.ok(settlementUseCase.confirm(creatorId, yearMonth)));
     }
 
     @PostMapping("/api/settlements/pay")
     public ResponseEntity<ApiResponse<SettlementUseCase.MonthlySettlementResponse>> pay(
-            @RequestParam String creatorId,
-            @RequestParam String yearMonth) {
+            @RequestParam @NotBlank(message = "크리에이터 ID는 필수입니다.") String creatorId,
+            @RequestParam @Pattern(regexp = YEAR_MONTH_PATTERN, message = YEAR_MONTH_MESSAGE) String yearMonth) {
         return ResponseEntity.ok(ApiResponse.ok(settlementUseCase.pay(creatorId, yearMonth)));
     }
 
     @GetMapping("/api/admin/settlements")
     public ResponseEntity<?> getAdminSummary(
-            @RequestParam String from,
-            @RequestParam String to) {
+            @RequestParam @Pattern(regexp = DATE_PATTERN, message = DATE_MESSAGE) String from,
+            @RequestParam @Pattern(regexp = DATE_PATTERN, message = DATE_MESSAGE) String to) {
         LocalDate fromDate, toDate;
         try {
             fromDate = LocalDate.parse(from);
@@ -59,8 +68,8 @@ public class SettlementController {
 
     @GetMapping("/api/admin/settlements/export")
     public ResponseEntity<String> exportCsv(
-            @RequestParam String from,
-            @RequestParam String to) {
+            @RequestParam @Pattern(regexp = DATE_PATTERN, message = DATE_MESSAGE) String from,
+            @RequestParam @Pattern(regexp = DATE_PATTERN, message = DATE_MESSAGE) String to) {
         LocalDate fromDate, toDate;
         try {
             fromDate = LocalDate.parse(from);

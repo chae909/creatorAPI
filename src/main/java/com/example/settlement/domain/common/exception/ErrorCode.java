@@ -11,7 +11,9 @@ public enum ErrorCode {
     SETTLEMENT_NOT_FOUND(404, "ST002", "정산 내역을 찾을 수 없습니다."),
     SETTLEMENT_ALREADY_EXISTS(409, "ST003", "해당 기간의 정산이 이미 존재합니다."),
     INVALID_STATUS_TRANSITION(409, "ST004", "유효하지 않은 상태 전이입니다."),
-    INVALID_DATE_RANGE(400, "AD001", "시작일이 종료일보다 늦을 수 없습니다.");
+    INVALID_DATE_RANGE(400, "AD001", "시작일이 종료일보다 늦을 수 없습니다."),
+    INVALID_PAID_AT(400, "SA004", "미래 시점의 결제 일시는 등록할 수 없습니다."),
+    INVALID_REFUND_AMOUNT(400, "SA005", "환불 금액은 0보다 커야 합니다.");
 
     private final int httpStatus;
     private final String code;

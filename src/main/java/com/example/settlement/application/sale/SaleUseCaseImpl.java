@@ -37,6 +37,10 @@ public class SaleUseCaseImpl implements SaleUseCase {
 
     @Override
     public SaleRecordResponse register(RegisterSaleCommand cmd) {
+        if (cmd.paidAt().isAfter(Instant.now().plusSeconds(60))) {
+            throw new BusinessException(ErrorCode.INVALID_PAID_AT);
+        }
+
         Course course = courseRepository.findById(cmd.courseId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.COURSE_NOT_FOUND));
 
@@ -65,6 +69,10 @@ public class SaleUseCaseImpl implements SaleUseCase {
 
     @Override
     public SaleRecordResponse cancel(CancelSaleCommand cmd) {
+        if (cmd.refundAmount() <= 0) {
+            throw new BusinessException(ErrorCode.INVALID_REFUND_AMOUNT);
+        }
+
         SaleRecord saleRecord = saleRecordRepository.findById(cmd.saleRecordId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.SALE_NOT_FOUND));
 
