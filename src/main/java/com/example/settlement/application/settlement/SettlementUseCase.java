@@ -1,5 +1,7 @@
 package com.example.settlement.application.settlement;
 
+import org.springframework.data.domain.Pageable;
+
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
@@ -30,5 +32,5 @@ public interface SettlementUseCase {
 
     MonthlySettlementResponse pay(String creatorId, String yearMonth);
 
-    AdminSettlementSummary getAdminSummary(AdminSettlementQuery query);
+    AdminSettlementSummary getAdminSummary(AdminSettlementQuery query, Pageable pageable);
 }

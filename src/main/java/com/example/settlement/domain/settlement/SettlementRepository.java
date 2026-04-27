@@ -1,5 +1,7 @@
 package com.example.settlement.domain.settlement;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -16,4 +18,12 @@ public interface SettlementRepository extends JpaRepository<Settlement, Long> {
     List<Settlement> findAllInYearMonthRange(
             @Param("fromYear") int fromYear, @Param("fromMonth") int fromMonth,
             @Param("toYear") int toYear, @Param("toMonth") int toMonth);
+
+    @Query("SELECT s FROM Settlement s WHERE " +
+           "(s.year > :fromYear OR (s.year = :fromYear AND s.month >= :fromMonth)) AND " +
+           "(s.year < :toYear OR (s.year = :toYear AND s.month <= :toMonth))")
+    Page<Settlement> findAllInYearMonthRange(
+            @Param("fromYear") int fromYear, @Param("fromMonth") int fromMonth,
+            @Param("toYear") int toYear, @Param("toMonth") int toMonth,
+            Pageable pageable);
 }

@@ -1,7 +1,9 @@
 package com.example.settlement.application.sale;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+
 import java.time.Instant;
-import java.util.List;
 
 public interface SaleUseCase {
 
@@ -19,5 +21,5 @@ public interface SaleUseCase {
 
     SaleRecordResponse cancel(CancelSaleCommand cmd);
 
-    List<SaleRecordResponse> list(SaleListQuery query);
+    Page<SaleRecordResponse> list(SaleListQuery query, Pageable pageable);
 }

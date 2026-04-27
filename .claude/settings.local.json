@@ -14,7 +14,12 @@
       "Bash(jobs -l)",
       "Bash(kill %1)",
       "Bash(./gradlew.bat test *)",
-      "Bash(xargs grep *)"
+      "Bash(xargs grep *)",
+      "Bash(awk '{print length\\($0\\)-length\\(gsub\\(/\\\\//, \"/\"\\)\\), $0}')",
+      "Bash(awk '{for\\(i=1;i<NF;i++\\)printf \"  \"; print $NF}')",
+      "Bash(cat)",
+      "Read(//tmp/**)",
+      "Bash(awk *)"
     ]
   }
 }

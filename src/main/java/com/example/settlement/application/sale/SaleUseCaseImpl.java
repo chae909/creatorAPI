@@ -8,8 +8,14 @@ import com.example.settlement.domain.sale.CancelRecord;
 import com.example.settlement.domain.sale.CancelRecordRepository;
 import com.example.settlement.domain.sale.SaleRecord;
 import com.example.settlement.domain.sale.SaleRecordRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.time.Instant;
 import java.util.List;
@@ -21,6 +27,8 @@ import java.util.stream.Collectors;
 @Service
 @Transactional
 public class SaleUseCaseImpl implements SaleUseCase {
+
+    private static final Logger log = LoggerFactory.getLogger(SaleUseCaseImpl.class);
 
     private final CourseRepository courseRepository;
     private final SaleRecordRepository saleRecordRepository;
@@ -36,6 +44,10 @@ public class SaleUseCaseImpl implements SaleUseCase {
 
     @Override
     public SaleRecordResponse register(RegisterSaleCommand cmd) {
+        if (cmd.paidAt().isAfter(Instant.now().plusSeconds(60))) {
+            throw new BusinessException(ErrorCode.INVALID_PAID_AT);
+        }
+
         Course course = courseRepository.findById(cmd.courseId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.COURSE_NOT_FOUND));
 
@@ -64,16 +76,19 @@ public class SaleUseCaseImpl implements SaleUseCase {
 
     @Override
     public SaleRecordResponse cancel(CancelSaleCommand cmd) {
+        if (cmd.refundAmount() <= 0) {
+            throw new BusinessException(ErrorCode.INVALID_REFUND_AMOUNT);
+        }
+
         SaleRecord saleRecord = saleRecordRepository.findById(cmd.saleRecordId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.SALE_NOT_FOUND));
-
-        if (cancelRecordRepository.findBySaleRecordId(cmd.saleRecordId()).isPresent()) {
-            throw new BusinessException(ErrorCode.ALREADY_CANCELLED);
-        }
 
         if (cmd.refundAmount() > saleRecord.getAmount()) {
             throw new BusinessException(ErrorCode.REFUND_EXCEEDS_PAYMENT);
         }
+
+        Course course = courseRepository.findById(saleRecord.getCourseId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.COURSE_NOT_FOUND));
 
         CancelRecord cancelRecord = new CancelRecord(
                 UUID.randomUUID().toString(),
@@ -82,10 +97,13 @@ public class SaleUseCaseImpl implements SaleUseCase {
                 cmd.cancelledAt(),
                 Instant.now()
         );
-        cancelRecordRepository.save(cancelRecord);
 
-        Course course = courseRepository.findById(saleRecord.getCourseId())
-                .orElseThrow(() -> new BusinessException(ErrorCode.COURSE_NOT_FOUND));
+        try {
+            cancelRecordRepository.saveAndFlush(cancelRecord);
+        } catch (DataIntegrityViolationException e) {
+            log.warn("중복 취소 시도 감지 - saleRecordId: {}", cmd.saleRecordId());
+            throw new BusinessException(ErrorCode.ALREADY_CANCELLED);
+        }
 
         return new SaleRecordResponse(
                 saleRecord.getId(),
@@ -101,44 +119,42 @@ public class SaleUseCaseImpl implements SaleUseCase {
     }
 
     @Override
-    public List<SaleRecordResponse> list(SaleListQuery query) {
+    public Page<SaleRecordResponse> list(SaleListQuery query, Pageable pageable) {
         List<Course> courses = courseRepository.findByCreatorId(query.creatorId());
         if (courses.isEmpty()) {
-            return List.of();
+            return Page.empty(pageable);
         }
 
         Map<String, String> courseIdToCreatorId = courses.stream()
                 .collect(Collectors.toMap(Course::getId, Course::getCreatorId));
 
         List<String> courseIds = List.copyOf(courseIdToCreatorId.keySet());
-        List<SaleRecord> sales = saleRecordRepository
-                .findByCourseIdInAndPaidAtGreaterThanEqualAndPaidAtLessThan(courseIds, query.from(), query.to());
+        Page<SaleRecord> salesPage = saleRecordRepository
+                .findByCourseIdInAndPaidAtGreaterThanEqualAndPaidAtLessThan(courseIds, query.from(), query.to(), pageable);
 
-        if (sales.isEmpty()) {
-            return List.of();
+        if (!salesPage.hasContent()) {
+            return Page.empty(pageable);
         }
 
-        List<String> saleIds = sales.stream().map(SaleRecord::getId).toList();
+        List<String> saleIds = salesPage.getContent().stream().map(SaleRecord::getId).toList();
         Map<String, CancelRecord> cancelBySaleId = cancelRecordRepository
                 .findBySaleRecordIdIn(saleIds)
                 .stream()
                 .collect(Collectors.toMap(CancelRecord::getSaleRecordId, Function.identity()));
 
-        return sales.stream()
-                .map(sale -> {
-                    CancelRecord cancel = cancelBySaleId.get(sale.getId());
-                    return new SaleRecordResponse(
-                            sale.getId(),
-                            sale.getCourseId(),
-                            courseIdToCreatorId.get(sale.getCourseId()),
-                            sale.getStudentId(),
-                            sale.getAmount(),
-                            sale.getPaidAt(),
-                            cancel != null,
-                            cancel != null ? cancel.getRefundAmount() : null,
-                            cancel != null ? cancel.getCancelledAt() : null
-                    );
-                })
-                .toList();
+        return salesPage.map(sale -> {
+            CancelRecord cancel = cancelBySaleId.get(sale.getId());
+            return new SaleRecordResponse(
+                    sale.getId(),
+                    sale.getCourseId(),
+                    courseIdToCreatorId.get(sale.getCourseId()),
+                    sale.getStudentId(),
+                    sale.getAmount(),
+                    sale.getPaidAt(),
+                    cancel != null,
+                    cancel != null ? cancel.getRefundAmount() : null,
+                    cancel != null ? cancel.getCancelledAt() : null
+            );
+        });
     }
 }

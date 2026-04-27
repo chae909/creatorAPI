@@ -1,5 +1,6 @@
 package com.example.settlement;
 
+import com.example.settlement.domain.settlement.SettlementRepository;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
@@ -10,6 +11,17 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+
+import org.springframework.http.MediaType;
+
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -22,6 +34,9 @@ class SettlementIntegrationTest {
 
     @Autowired
     MockMvc mockMvc;
+
+    @Autowired
+    SettlementRepository settlementRepository;
 
     // creator-1 March 2025:
     //   sales:   sale-1(50000) + sale-2(50000) + sale-3(80000) + sale-4(80000) = 260000
@@ -41,7 +56,8 @@ class SettlementIntegrationTest {
                 .andExpect(jsonPath("$.data.payoutAmount").value(120000))
                 .andExpect(jsonPath("$.data.saleCount").value(4))
                 .andExpect(jsonPath("$.data.cancelCount").value(2))
-                .andExpect(jsonPath("$.data.status").value("PENDING"));
+                .andExpect(jsonPath("$.data.status").value("PENDING"))
+                .andExpect(header().exists("X-Request-Id"));
     }
 
     @Test
@@ -127,16 +143,16 @@ class SettlementIntegrationTest {
 
     @Test
     @Order(8)
-    void confirm_on_paid_returns_400() throws Exception {
+    void confirm_on_paid_returns_409() throws Exception {
         mockMvc.perform(post("/api/settlements/confirm")
                         .param("creatorId", "creator-1")
                         .param("yearMonth", "2025-03"))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isConflict());
     }
 
     @Test
     @Order(9)
-    void pay_without_confirm_returns_400() throws Exception {
+    void pay_without_confirm_returns_409() throws Exception {
         mockMvc.perform(get("/api/settlements/monthly")
                         .param("creatorId", "creator-2")
                         .param("yearMonth", "2025-03"))
@@ -146,7 +162,7 @@ class SettlementIntegrationTest {
         mockMvc.perform(post("/api/settlements/pay")
                         .param("creatorId", "creator-2")
                         .param("yearMonth", "2025-03"))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isConflict());
     }
 
     @Test
@@ -182,5 +198,58 @@ class SettlementIntegrationTest {
                 .andExpect(header().string("Content-Type", containsString("text/csv")))
                 .andExpect(content().string(containsString("크리에이터ID")))
                 .andExpect(content().string(containsString("합계")));
+    }
+
+    // Adds a 15% policy (effectiveFrom 2024-01-01) and verifies creator-3 Feb 2025
+    // uses it instead of the original 20% policy (effectiveFrom 2020-01-01).
+    // sale-7: amount=120000, paid_at=2025-02-14T01:00Z (Feb 2025 KST)
+    @Test
+    @Order(20)
+    void fee_policy_history_applies_correct_rate() throws Exception {
+        mockMvc.perform(post("/api/admin/fee-policies")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"feeRate\": 0.15, \"effectiveFrom\": \"2024-01-01\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.feeRatePercent").value("15%"));
+
+        // creator-3 Feb 2025: freshly calculated with the new 15% rate
+        mockMvc.perform(get("/api/settlements/monthly")
+                        .param("creatorId", "creator-3")
+                        .param("yearMonth", "2025-02"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.feeRate").value(0.15))
+                .andExpect(jsonPath("$.data.totalSales").value(120000))
+                .andExpect(jsonPath("$.data.feeAmount").value(18000))
+                .andExpect(jsonPath("$.data.payoutAmount").value(102000));
+    }
+
+    @Test
+    @Order(25)
+    void concurrent_settlement_creation_no_duplicate() throws Exception {
+        int threadCount = 5;
+        ExecutorService executor = Executors.newFixedThreadPool(threadCount);
+        CountDownLatch latch = new CountDownLatch(threadCount);
+        List<Integer> statusCodes = Collections.synchronizedList(new ArrayList<>());
+
+        for (int i = 0; i < threadCount; i++) {
+            executor.submit(() -> {
+                try {
+                    latch.countDown();
+                    latch.await();
+                    int status = mockMvc.perform(get("/api/settlements/monthly")
+                                    .param("creatorId", "creator-3")
+                                    .param("yearMonth", "2025-02"))
+                            .andReturn().getResponse().getStatus();
+                    statusCodes.add(status);
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+            });
+        }
+        executor.shutdown();
+        executor.awaitTermination(10, TimeUnit.SECONDS);
+
+        assertThat(statusCodes).allMatch(code -> code == 200);
+        assertThat(settlementRepository.findByCreatorIdAndYearAndMonth("creator-3", 2025, 2)).isPresent();
     }
 }
