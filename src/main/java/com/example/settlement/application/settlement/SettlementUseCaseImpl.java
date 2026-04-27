@@ -178,7 +178,7 @@ public class SettlementUseCaseImpl implements SettlementUseCase {
 
         FeePolicy feePolicy = feePolicyRepository
                 .findTopByEffectiveFromLessThanEqualOrderByEffectiveFromDesc(LocalDate.of(year, month, 1))
-                .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_DATE_RANGE));
+                .orElseThrow(() -> new BusinessException(ErrorCode.FEE_POLICY_NOT_FOUND));
 
         SettlementCalculator.SettlementResult result =
                 SettlementCalculator.calculate(sales, cancels, feePolicy.getFeeRate());

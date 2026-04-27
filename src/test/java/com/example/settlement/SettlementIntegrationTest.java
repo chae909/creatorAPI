@@ -19,6 +19,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+import org.springframework.http.MediaType;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -196,6 +198,29 @@ class SettlementIntegrationTest {
                 .andExpect(header().string("Content-Type", containsString("text/csv")))
                 .andExpect(content().string(containsString("크리에이터ID")))
                 .andExpect(content().string(containsString("합계")));
+    }
+
+    // Adds a 15% policy (effectiveFrom 2024-01-01) and verifies creator-3 Feb 2025
+    // uses it instead of the original 20% policy (effectiveFrom 2020-01-01).
+    // sale-7: amount=120000, paid_at=2025-02-14T01:00Z (Feb 2025 KST)
+    @Test
+    @Order(20)
+    void fee_policy_history_applies_correct_rate() throws Exception {
+        mockMvc.perform(post("/api/admin/fee-policies")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"feeRate\": 0.15, \"effectiveFrom\": \"2024-01-01\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.feeRatePercent").value("15%"));
+
+        // creator-3 Feb 2025: freshly calculated with the new 15% rate
+        mockMvc.perform(get("/api/settlements/monthly")
+                        .param("creatorId", "creator-3")
+                        .param("yearMonth", "2025-02"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.feeRate").value(0.15))
+                .andExpect(jsonPath("$.data.totalSales").value(120000))
+                .andExpect(jsonPath("$.data.feeAmount").value(18000))
+                .andExpect(jsonPath("$.data.payoutAmount").value(102000));
     }
 
     @Test
