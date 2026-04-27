@@ -36,19 +36,22 @@ public class SettlementUseCaseImpl implements SettlementUseCase {
     private final CancelRecordRepository cancelRecordRepository;
     private final FeePolicyRepository feePolicyRepository;
     private final SettlementRepository settlementRepository;
+    private final SettlementSaver settlementSaver;
 
     public SettlementUseCaseImpl(CreatorRepository creatorRepository,
                                  CourseRepository courseRepository,
                                  SaleRecordRepository saleRecordRepository,
                                  CancelRecordRepository cancelRecordRepository,
                                  FeePolicyRepository feePolicyRepository,
-                                 SettlementRepository settlementRepository) {
+                                 SettlementRepository settlementRepository,
+                                 SettlementSaver settlementSaver) {
         this.creatorRepository = creatorRepository;
         this.courseRepository = courseRepository;
         this.saleRecordRepository = saleRecordRepository;
         this.cancelRecordRepository = cancelRecordRepository;
         this.feePolicyRepository = feePolicyRepository;
         this.settlementRepository = settlementRepository;
+        this.settlementSaver = settlementSaver;
     }
 
     @Override
@@ -130,7 +133,9 @@ public class SettlementUseCaseImpl implements SettlementUseCase {
                 .orElseGet(() -> {
                     Settlement newSettlement = calculateNew(creatorId, year, month);
                     try {
-                        return settlementRepository.save(newSettlement);
+                        // REQUIRES_NEW: inner tx commits immediately; if it fails, only that tx is
+                        // rolled back, leaving the outer tx session valid for the re-read below.
+                        return settlementSaver.save(newSettlement);
                     } catch (DataIntegrityViolationException e) {
                         return settlementRepository
                                 .findByCreatorIdAndYearAndMonth(creatorId, year, month)

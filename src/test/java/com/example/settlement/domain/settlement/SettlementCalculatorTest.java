@@ -91,6 +91,20 @@ class SettlementCalculatorTest {
     }
 
     @Test
+    void negative_net_sales_when_refunds_exceed_sales() {
+        var sales = List.of(sale("s1", 50000L));
+        var cancels = List.of(cancel("c1", "s1", 80000L));
+
+        var result = SettlementCalculator.calculate(sales, cancels, RATE_20);
+
+        assertThat(result.totalSales()).isEqualTo(50000L);
+        assertThat(result.totalRefunds()).isEqualTo(80000L);
+        assertThat(result.netSales()).isEqualTo(-30000L);
+        assertThat(result.feeAmount()).isEqualTo(-6000L);
+        assertThat(result.payoutAmount()).isEqualTo(-24000L);
+    }
+
+    @Test
     void negativeNetSales_downRoundingTowardZero_notFloor() {
         // netSales = 50000 - 80001 = -30001
         // -30001 * 0.2 = -6000.2
