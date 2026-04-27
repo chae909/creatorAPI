@@ -15,6 +15,7 @@ import com.example.settlement.domain.settlement.FeePolicyRepository;
 import com.example.settlement.domain.settlement.Settlement;
 import com.example.settlement.domain.settlement.SettlementCalculator;
 import com.example.settlement.domain.settlement.SettlementRepository;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -126,10 +127,19 @@ public class SettlementUseCaseImpl implements SettlementUseCase {
         int year = ym.getYear();
         int month = ym.getMonthValue();
         return settlementRepository.findByCreatorIdAndYearAndMonth(creatorId, year, month)
-                .orElseGet(() -> calculateAndSave(creatorId, year, month));
+                .orElseGet(() -> {
+                    Settlement newSettlement = calculateNew(creatorId, year, month);
+                    try {
+                        return settlementRepository.save(newSettlement);
+                    } catch (DataIntegrityViolationException e) {
+                        return settlementRepository
+                                .findByCreatorIdAndYearAndMonth(creatorId, year, month)
+                                .orElseThrow();
+                    }
+                });
     }
 
-    private Settlement calculateAndSave(String creatorId, int year, int month) {
+    private Settlement calculateNew(String creatorId, int year, int month) {
         TimeRangeUtils.InstantRange range = TimeRangeUtils.toKstMonthRange(year, month);
 
         List<String> courseIds = courseRepository.findByCreatorId(creatorId)
@@ -144,16 +154,10 @@ public class SettlementUseCaseImpl implements SettlementUseCase {
             sales = List.of();
             cancels = List.of();
         } else {
-            sales = saleRecordRepository.findByCourseIdInAndPaidAtGreaterThanEqualAndPaidAtLessThan(courseIds, range.start(), range.end());
-
-            List<String> allSaleIds = saleRecordRepository.findByCourseIdIn(courseIds)
-                    .stream()
-                    .map(SaleRecord::getId)
-                    .toList();
-
-            cancels = allSaleIds.isEmpty() ? List.of()
-                    : cancelRecordRepository.findByCancelledAtGreaterThanEqualAndCancelledAtLessThanAndSaleRecordIdIn(
-                            range.start(), range.end(), allSaleIds);
+            sales = saleRecordRepository.findByCourseIdInAndPaidAtGreaterThanEqualAndPaidAtLessThan(
+                    courseIds, range.start(), range.end());
+            cancels = cancelRecordRepository.findByCourseIdsAndCancelledAtRange(
+                    courseIds, range.start(), range.end());
         }
 
         FeePolicy feePolicy = feePolicyRepository
@@ -163,16 +167,13 @@ public class SettlementUseCaseImpl implements SettlementUseCase {
         SettlementCalculator.SettlementResult result =
                 SettlementCalculator.calculate(sales, cancels, feePolicy.getFeeRate());
 
-        Instant now = Instant.now();
-        Settlement settlement = new Settlement(
+        return new Settlement(
                 creatorId, year, month,
                 result.totalSales(), result.totalRefunds(), result.netSales(),
                 feePolicy.getFeeRate(), result.feeAmount(), result.payoutAmount(),
                 result.saleCount(), result.cancelCount(),
-                now
+                Instant.now()
         );
-
-        return settlementRepository.save(settlement);
     }
 
     private MonthlySettlementResponse toMonthlyResponse(Settlement s, String creatorName) {

@@ -8,6 +8,7 @@ import com.example.settlement.domain.sale.CancelRecord;
 import com.example.settlement.domain.sale.CancelRecordRepository;
 import com.example.settlement.domain.sale.SaleRecord;
 import com.example.settlement.domain.sale.SaleRecordRepository;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -67,13 +68,12 @@ public class SaleUseCaseImpl implements SaleUseCase {
         SaleRecord saleRecord = saleRecordRepository.findById(cmd.saleRecordId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.SALE_NOT_FOUND));
 
-        if (cancelRecordRepository.findBySaleRecordId(cmd.saleRecordId()).isPresent()) {
-            throw new BusinessException(ErrorCode.ALREADY_CANCELLED);
-        }
-
         if (cmd.refundAmount() > saleRecord.getAmount()) {
             throw new BusinessException(ErrorCode.REFUND_EXCEEDS_PAYMENT);
         }
+
+        Course course = courseRepository.findById(saleRecord.getCourseId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.COURSE_NOT_FOUND));
 
         CancelRecord cancelRecord = new CancelRecord(
                 UUID.randomUUID().toString(),
@@ -82,10 +82,12 @@ public class SaleUseCaseImpl implements SaleUseCase {
                 cmd.cancelledAt(),
                 Instant.now()
         );
-        cancelRecordRepository.save(cancelRecord);
 
-        Course course = courseRepository.findById(saleRecord.getCourseId())
-                .orElseThrow(() -> new BusinessException(ErrorCode.COURSE_NOT_FOUND));
+        try {
+            cancelRecordRepository.saveAndFlush(cancelRecord);
+        } catch (DataIntegrityViolationException e) {
+            throw new BusinessException(ErrorCode.ALREADY_CANCELLED);
+        }
 
         return new SaleRecordResponse(
                 saleRecord.getId(),
