@@ -112,7 +112,7 @@ public class SaleUseCaseImpl implements SaleUseCase {
 
         List<String> courseIds = List.copyOf(courseIdToCreatorId.keySet());
         List<SaleRecord> sales = saleRecordRepository
-                .findByCourseIdInAndPaidAtBetween(courseIds, query.from(), query.to());
+                .findByCourseIdInAndPaidAtGreaterThanEqualAndPaidAtLessThan(courseIds, query.from(), query.to());
 
         if (sales.isEmpty()) {
             return List.of();

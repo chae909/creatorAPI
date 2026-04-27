@@ -144,7 +144,7 @@ public class SettlementUseCaseImpl implements SettlementUseCase {
             sales = List.of();
             cancels = List.of();
         } else {
-            sales = saleRecordRepository.findByCourseIdInAndPaidAtBetween(courseIds, range.start(), range.end());
+            sales = saleRecordRepository.findByCourseIdInAndPaidAtGreaterThanEqualAndPaidAtLessThan(courseIds, range.start(), range.end());
 
             List<String> allSaleIds = saleRecordRepository.findByCourseIdIn(courseIds)
                     .stream()
@@ -152,7 +152,7 @@ public class SettlementUseCaseImpl implements SettlementUseCase {
                     .toList();
 
             cancels = allSaleIds.isEmpty() ? List.of()
-                    : cancelRecordRepository.findByCancelledAtBetweenAndSaleRecordIdIn(
+                    : cancelRecordRepository.findByCancelledAtGreaterThanEqualAndCancelledAtLessThanAndSaleRecordIdIn(
                             range.start(), range.end(), allSaleIds);
         }
 

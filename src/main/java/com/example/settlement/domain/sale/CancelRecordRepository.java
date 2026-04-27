@@ -8,5 +8,5 @@ import java.util.Optional;
 public interface CancelRecordRepository extends JpaRepository<CancelRecord, String> {
     List<CancelRecord> findBySaleRecordIdIn(List<String> saleIds);
     Optional<CancelRecord> findBySaleRecordId(String saleRecordId);
-    List<CancelRecord> findByCancelledAtBetweenAndSaleRecordIdIn(Instant from, Instant to, List<String> saleRecordIds);
+    List<CancelRecord> findByCancelledAtGreaterThanEqualAndCancelledAtLessThanAndSaleRecordIdIn(Instant from, Instant to, List<String> saleRecordIds);
 }
