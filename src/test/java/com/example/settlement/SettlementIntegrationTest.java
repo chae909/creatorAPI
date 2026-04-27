@@ -140,16 +140,16 @@ class SettlementIntegrationTest {
 
     @Test
     @Order(8)
-    void confirm_on_paid_returns_400() throws Exception {
+    void confirm_on_paid_returns_409() throws Exception {
         mockMvc.perform(post("/api/settlements/confirm")
                         .param("creatorId", "creator-1")
                         .param("yearMonth", "2025-03"))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isConflict());
     }
 
     @Test
     @Order(9)
-    void pay_without_confirm_returns_400() throws Exception {
+    void pay_without_confirm_returns_409() throws Exception {
         mockMvc.perform(get("/api/settlements/monthly")
                         .param("creatorId", "creator-2")
                         .param("yearMonth", "2025-03"))
@@ -159,7 +159,7 @@ class SettlementIntegrationTest {
         mockMvc.perform(post("/api/settlements/pay")
                         .param("creatorId", "creator-2")
                         .param("yearMonth", "2025-03"))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isConflict());
     }
 
     @Test

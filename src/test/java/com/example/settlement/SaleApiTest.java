@@ -50,7 +50,7 @@ class SaleApiTest {
 
     @Test
     @Order(2)
-    void register_sale_invalid_course_returns_400() throws Exception {
+    void register_sale_invalid_course_returns_404() throws Exception {
         var body = Map.of(
                 "courseId", "course-999",
                 "studentId", "student-1",
@@ -61,13 +61,13 @@ class SaleApiTest {
         mockMvc.perform(post("/api/sales")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(body)))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isNotFound());
     }
 
     // sale-3 is already cancelled by cancel-1 (seed data)
     @Test
     @Order(3)
-    void cancel_already_cancelled_returns_400() throws Exception {
+    void cancel_already_cancelled_returns_409() throws Exception {
         var body = Map.of(
                 "refundAmount", 10000,
                 "cancelledAt", "2025-04-01T10:00:00+09:00"
@@ -76,7 +76,7 @@ class SaleApiTest {
         mockMvc.perform(post("/api/sales/sale-3/cancel")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(body)))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isConflict());
     }
 
     // sale-1 amount = 50000; 999999 > 50000 → REFUND_EXCEEDS_PAYMENT
@@ -96,7 +96,7 @@ class SaleApiTest {
 
     @Test
     @Order(5)
-    void cancel_nonexistent_sale_returns_400() throws Exception {
+    void cancel_nonexistent_sale_returns_404() throws Exception {
         var body = Map.of(
                 "refundAmount", 10000,
                 "cancelledAt", "2025-04-01T10:00:00+09:00"
@@ -105,7 +105,7 @@ class SaleApiTest {
         mockMvc.perform(post("/api/sales/sale-9999/cancel")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(body)))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isNotFound());
     }
 
     // creator-1 courses: course-1, course-2
