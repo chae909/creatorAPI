@@ -28,3 +28,12 @@ spring:
     console:
       enabled: true
       path: /h2-console
+
+logging:
+  pattern:
+    console: "%d{HH:mm:ss.SSS} [%thread] [%X{requestId}] %-5level %logger{36} - %msg%n"
+  level:
+    root: INFO
+    com.example.settlement: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.orm.jdbc.bind: TRACE

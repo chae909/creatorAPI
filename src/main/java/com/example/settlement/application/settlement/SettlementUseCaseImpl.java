@@ -15,6 +15,8 @@ import com.example.settlement.domain.settlement.FeePolicyRepository;
 import com.example.settlement.domain.settlement.Settlement;
 import com.example.settlement.domain.settlement.SettlementCalculator;
 import com.example.settlement.domain.settlement.SettlementRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,6 +31,8 @@ import java.util.stream.Collectors;
 @Service
 @Transactional
 public class SettlementUseCaseImpl implements SettlementUseCase {
+
+    private static final Logger log = LoggerFactory.getLogger(SettlementUseCaseImpl.class);
 
     private final CreatorRepository creatorRepository;
     private final CourseRepository courseRepository;
@@ -56,9 +60,12 @@ public class SettlementUseCaseImpl implements SettlementUseCase {
 
     @Override
     public MonthlySettlementResponse getMonthly(MonthlySettlementQuery query) {
+        log.debug("정산 조회 요청 - creatorId: {}, yearMonth: {}", query.creatorId(), query.yearMonth());
         Creator creator = creatorRepository.findById(query.creatorId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.CREATOR_NOT_FOUND));
         Settlement settlement = findOrCreateSettlement(creator.getId(), query.yearMonth());
+        log.info("정산 계산 완료 - creatorId: {}, {}-{}, payoutAmount: {}",
+                query.creatorId(), settlement.getYear(), settlement.getMonth(), settlement.getPayoutAmount());
         return toMonthlyResponse(settlement, creator.getName());
     }
 
@@ -69,6 +76,8 @@ public class SettlementUseCaseImpl implements SettlementUseCase {
         Settlement settlement = findOrCreateSettlement(creatorId, yearMonth);
         settlement.confirm(Instant.now());
         settlementRepository.save(settlement);
+        log.info("정산 확정 처리 - creatorId: {}, {}-{}, settlementId: {}",
+                creatorId, settlement.getYear(), settlement.getMonth(), settlement.getId());
         return toMonthlyResponse(settlement, creator.getName());
     }
 
@@ -82,6 +91,8 @@ public class SettlementUseCaseImpl implements SettlementUseCase {
                 .orElseThrow(() -> new BusinessException(ErrorCode.SETTLEMENT_NOT_FOUND));
         settlement.pay(Instant.now());
         settlementRepository.save(settlement);
+        log.info("정산 지급 처리 - creatorId: {}, {}-{}, payoutAmount: {}",
+                creatorId, settlement.getYear(), settlement.getMonth(), settlement.getPayoutAmount());
         return toMonthlyResponse(settlement, creator.getName());
     }
 

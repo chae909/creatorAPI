@@ -8,6 +8,8 @@ import com.example.settlement.domain.sale.CancelRecord;
 import com.example.settlement.domain.sale.CancelRecordRepository;
 import com.example.settlement.domain.sale.SaleRecord;
 import com.example.settlement.domain.sale.SaleRecordRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,6 +24,8 @@ import java.util.stream.Collectors;
 @Service
 @Transactional
 public class SaleUseCaseImpl implements SaleUseCase {
+
+    private static final Logger log = LoggerFactory.getLogger(SaleUseCaseImpl.class);
 
     private final CourseRepository courseRepository;
     private final SaleRecordRepository saleRecordRepository;
@@ -94,6 +98,7 @@ public class SaleUseCaseImpl implements SaleUseCase {
         try {
             cancelRecordRepository.saveAndFlush(cancelRecord);
         } catch (DataIntegrityViolationException e) {
+            log.warn("중복 취소 시도 감지 - saleRecordId: {}", cmd.saleRecordId());
             throw new BusinessException(ErrorCode.ALREADY_CANCELLED);
         }
 

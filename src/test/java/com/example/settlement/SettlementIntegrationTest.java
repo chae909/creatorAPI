@@ -54,7 +54,8 @@ class SettlementIntegrationTest {
                 .andExpect(jsonPath("$.data.payoutAmount").value(120000))
                 .andExpect(jsonPath("$.data.saleCount").value(4))
                 .andExpect(jsonPath("$.data.cancelCount").value(2))
-                .andExpect(jsonPath("$.data.status").value("PENDING"));
+                .andExpect(jsonPath("$.data.status").value("PENDING"))
+                .andExpect(header().exists("X-Request-Id"));
     }
 
     @Test
