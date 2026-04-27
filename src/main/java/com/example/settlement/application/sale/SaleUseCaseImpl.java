@@ -14,6 +14,9 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -116,44 +119,42 @@ public class SaleUseCaseImpl implements SaleUseCase {
     }
 
     @Override
-    public List<SaleRecordResponse> list(SaleListQuery query) {
+    public Page<SaleRecordResponse> list(SaleListQuery query, Pageable pageable) {
         List<Course> courses = courseRepository.findByCreatorId(query.creatorId());
         if (courses.isEmpty()) {
-            return List.of();
+            return Page.empty(pageable);
         }
 
         Map<String, String> courseIdToCreatorId = courses.stream()
                 .collect(Collectors.toMap(Course::getId, Course::getCreatorId));
 
         List<String> courseIds = List.copyOf(courseIdToCreatorId.keySet());
-        List<SaleRecord> sales = saleRecordRepository
-                .findByCourseIdInAndPaidAtGreaterThanEqualAndPaidAtLessThan(courseIds, query.from(), query.to());
+        Page<SaleRecord> salesPage = saleRecordRepository
+                .findByCourseIdInAndPaidAtGreaterThanEqualAndPaidAtLessThan(courseIds, query.from(), query.to(), pageable);
 
-        if (sales.isEmpty()) {
-            return List.of();
+        if (!salesPage.hasContent()) {
+            return Page.empty(pageable);
         }
 
-        List<String> saleIds = sales.stream().map(SaleRecord::getId).toList();
+        List<String> saleIds = salesPage.getContent().stream().map(SaleRecord::getId).toList();
         Map<String, CancelRecord> cancelBySaleId = cancelRecordRepository
                 .findBySaleRecordIdIn(saleIds)
                 .stream()
                 .collect(Collectors.toMap(CancelRecord::getSaleRecordId, Function.identity()));
 
-        return sales.stream()
-                .map(sale -> {
-                    CancelRecord cancel = cancelBySaleId.get(sale.getId());
-                    return new SaleRecordResponse(
-                            sale.getId(),
-                            sale.getCourseId(),
-                            courseIdToCreatorId.get(sale.getCourseId()),
-                            sale.getStudentId(),
-                            sale.getAmount(),
-                            sale.getPaidAt(),
-                            cancel != null,
-                            cancel != null ? cancel.getRefundAmount() : null,
-                            cancel != null ? cancel.getCancelledAt() : null
-                    );
-                })
-                .toList();
+        return salesPage.map(sale -> {
+            CancelRecord cancel = cancelBySaleId.get(sale.getId());
+            return new SaleRecordResponse(
+                    sale.getId(),
+                    sale.getCourseId(),
+                    courseIdToCreatorId.get(sale.getCourseId()),
+                    sale.getStudentId(),
+                    sale.getAmount(),
+                    sale.getPaidAt(),
+                    cancel != null,
+                    cancel != null ? cancel.getRefundAmount() : null,
+                    cancel != null ? cancel.getCancelledAt() : null
+            );
+        });
     }
 }

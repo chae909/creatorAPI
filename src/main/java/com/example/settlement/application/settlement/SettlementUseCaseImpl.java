@@ -21,6 +21,9 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.YearMonth;
@@ -97,10 +100,13 @@ public class SettlementUseCaseImpl implements SettlementUseCase {
     }
 
     @Override
-    public AdminSettlementSummary getAdminSummary(AdminSettlementQuery query) {
-        List<Settlement> settlements = settlementRepository.findAllInYearMonthRange(
+    public AdminSettlementSummary getAdminSummary(AdminSettlementQuery query, Pageable pageable) {
+        Page<Settlement> page = settlementRepository.findAllInYearMonthRange(
                 query.from().getYear(), query.from().getMonthValue(),
-                query.to().getYear(), query.to().getMonthValue());
+                query.to().getYear(), query.to().getMonthValue(),
+                pageable);
+
+        List<Settlement> settlements = page.getContent();
 
         List<String> creatorIds = settlements.stream()
                 .map(Settlement::getCreatorId)

@@ -5,6 +5,8 @@ import com.example.settlement.presentation.common.ApiResponse;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Positive;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
@@ -67,7 +69,9 @@ public class SaleController {
     public ResponseEntity<?> list(
             @RequestParam String creatorId,
             @RequestParam String from,
-            @RequestParam String to) {
+            @RequestParam String to,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
         Instant fromInstant, toInstant;
         try {
             fromInstant = OffsetDateTime.parse(from).toInstant();
@@ -77,6 +81,7 @@ public class SaleController {
                     .body(ApiResponse.fail("올바르지 않은 날짜 형식입니다. ISO 8601 형식을 사용하세요."));
         }
         var query = new SaleUseCase.SaleListQuery(creatorId, fromInstant, toInstant);
-        return ResponseEntity.ok(ApiResponse.ok(saleUseCase.list(query)));
+        var pageable = PageRequest.of(page, size, Sort.by("paidAt").descending());
+        return ResponseEntity.ok(ApiResponse.ok(saleUseCase.list(query, pageable)));
     }
 }

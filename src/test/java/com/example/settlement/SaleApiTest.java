@@ -119,7 +119,7 @@ class SaleApiTest {
                         .param("from", "2025-03-01T00:00:00+09:00")
                         .param("to", "2025-04-01T00:00:00+09:00"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data", hasSize(4)));
+                .andExpect(jsonPath("$.data.content", hasSize(4)));
     }
 
     @Test
