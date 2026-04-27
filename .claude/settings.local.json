@@ -8,7 +8,11 @@
       "Bash(.\\\\gradlew.bat clean *)",
       "Bash(cmd *)",
       "PowerShell(.\\\\gradlew.bat clean test 2>&1)",
-      "Bash(./gradlew.bat clean *)"
+      "Bash(./gradlew.bat clean *)",
+      "Bash(./gradlew.bat build *)",
+      "Bash(./gradlew.bat bootRun)",
+      "Bash(jobs -l)",
+      "Bash(kill %1)"
     ]
   }
 }
