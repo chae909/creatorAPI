@@ -1,4 +1,7 @@
 spring:
+  profiles:
+    active: local
+
   threads:
     virtual:
       enabled: true
@@ -18,16 +21,29 @@ spring:
         jdbc:
           time_zone: UTC
         format_sql: true
-    show-sql: false
 
   flyway:
     enabled: true
     locations: classpath:db/migration
 
-  h2:
-    console:
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info, metrics
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: when-authorized
+  info:
+    env:
       enabled: true
-      path: /h2-console
+
+info:
+  app:
+    name: Creator Settlement API
+    version: 1.0.0
+    description: 크리에이터 정산 처리 시스템
 
 logging:
   pattern:
@@ -35,5 +51,3 @@ logging:
   level:
     root: INFO
     com.example.settlement: DEBUG
-    org.hibernate.SQL: DEBUG
-    org.hibernate.orm.jdbc.bind: TRACE

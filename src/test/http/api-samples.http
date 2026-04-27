@@ -1,0 +1,52 @@
+### 헬스체크
+GET http://localhost:8080/actuator/health
+
+### 판매 등록
+POST http://localhost:8080/api/sales
+Content-Type: application/json
+
+{
+  "courseId": "course-1",
+  "studentId": "student-99",
+  "amount": 50000,
+  "paidAt": "2025-04-01T10:00:00+09:00"
+}
+
+### 취소 등록
+POST http://localhost:8080/api/sales/{{saleId}}/cancel
+Content-Type: application/json
+
+{
+  "refundAmount": 50000,
+  "cancelledAt": "2025-04-03T10:00:00+09:00"
+}
+
+### 판매 내역 조회
+GET http://localhost:8080/api/sales?creatorId=creator-1&from=2025-03-01T00:00:00+09:00&to=2025-04-01T00:00:00+09:00
+
+### 월별 정산 조회
+GET http://localhost:8080/api/settlements/monthly?creatorId=creator-1&yearMonth=2025-03
+
+### 정산 확정
+POST http://localhost:8080/api/settlements/confirm?creatorId=creator-1&yearMonth=2025-03
+
+### 정산 지급
+POST http://localhost:8080/api/settlements/pay?creatorId=creator-1&yearMonth=2025-03
+
+### 운영자 집계
+GET http://localhost:8080/api/admin/settlements?from=2025-01-01&to=2025-03-31
+
+### CSV 다운로드
+GET http://localhost:8080/api/admin/settlements/export?from=2025-01-01&to=2025-03-31
+
+### 수수료 정책 조회
+GET http://localhost:8080/api/admin/fee-policies
+
+### 수수료 정책 등록
+POST http://localhost:8080/api/admin/fee-policies
+Content-Type: application/json
+
+{
+  "feeRate": 0.15,
+  "effectiveFrom": "2026-01-01"
+}
