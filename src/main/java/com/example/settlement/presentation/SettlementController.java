@@ -11,7 +11,6 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
-import java.time.format.DateTimeParseException;
 
 @RestController
 @Validated
@@ -53,19 +52,13 @@ public class SettlementController {
     }
 
     @GetMapping("/api/admin/settlements")
-    public ResponseEntity<?> getAdminSummary(
+    public ResponseEntity<ApiResponse<SettlementUseCase.AdminSettlementSummary>> getAdminSummary(
             @RequestParam @Pattern(regexp = DATE_PATTERN, message = DATE_MESSAGE) String from,
             @RequestParam @Pattern(regexp = DATE_PATTERN, message = DATE_MESSAGE) String to,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "50") int size) {
-        LocalDate fromDate, toDate;
-        try {
-            fromDate = LocalDate.parse(from);
-            toDate = LocalDate.parse(to);
-        } catch (DateTimeParseException e) {
-            return ResponseEntity.badRequest()
-                    .body(ApiResponse.fail("올바르지 않은 날짜 형식입니다. yyyy-MM-dd 형식을 사용하세요."));
-        }
+        LocalDate fromDate = LocalDate.parse(from);
+        LocalDate toDate = LocalDate.parse(to);
         var query = new SettlementUseCase.AdminSettlementQuery(fromDate, toDate);
         var pageable = PageRequest.of(page, size);
         return ResponseEntity.ok(ApiResponse.ok(settlementUseCase.getAdminSummary(query, pageable)));
@@ -75,13 +68,8 @@ public class SettlementController {
     public ResponseEntity<String> exportCsv(
             @RequestParam @Pattern(regexp = DATE_PATTERN, message = DATE_MESSAGE) String from,
             @RequestParam @Pattern(regexp = DATE_PATTERN, message = DATE_MESSAGE) String to) {
-        LocalDate fromDate, toDate;
-        try {
-            fromDate = LocalDate.parse(from);
-            toDate = LocalDate.parse(to);
-        } catch (DateTimeParseException e) {
-            return ResponseEntity.badRequest().body("올바르지 않은 날짜 형식입니다. yyyy-MM-dd 형식을 사용하세요.");
-        }
+        LocalDate fromDate = LocalDate.parse(from);
+        LocalDate toDate = LocalDate.parse(to);
         var query = new SettlementUseCase.AdminSettlementQuery(fromDate, toDate);
         var summary = settlementUseCase.getAdminSummary(query, Pageable.unpaged());
         String csv = csvExportService.toCsv(summary);
