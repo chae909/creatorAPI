@@ -86,16 +86,18 @@ public class Settlement {
     }
 
     public void confirm(Instant now) {
-        if (this.status != SettlementStatus.PENDING)
+        if (this.status != SettlementStatus.PENDING) {
             throw new BusinessException(ErrorCode.INVALID_STATUS_TRANSITION);
+        }
         this.status = status.next();
         this.confirmedAt = now;
         this.updatedAt = now;
     }
 
     public void pay(Instant now) {
-        if (this.status != SettlementStatus.CONFIRMED)
+        if (this.status != SettlementStatus.CONFIRMED) {
             throw new BusinessException(ErrorCode.INVALID_STATUS_TRANSITION);
+        }
         this.status = status.next();
         this.paidAt = now;
         this.updatedAt = now;

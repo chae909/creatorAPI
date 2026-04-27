@@ -21,7 +21,7 @@ public final class TimeRangeUtils {
     public static InstantRange toKstMonthRange(int year, int month) {
         YearMonth ym = YearMonth.of(year, month);
         ZonedDateTime startKst = ym.atDay(1).atStartOfDay(KST);
-        ZonedDateTime endKst = ym.atEndOfMonth().atTime(23, 59, 59, 999_999_999).atZone(KST);
+        ZonedDateTime endKst = ym.plusMonths(1).atDay(1).atStartOfDay(KST);
         return new InstantRange(startKst.toInstant(), endKst.toInstant());
     }
 
