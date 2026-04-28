@@ -14,7 +14,8 @@ public enum ErrorCode {
     INVALID_DATE_RANGE(400, "AD001", "시작일이 종료일보다 늦을 수 없습니다."),
     INVALID_PAID_AT(400, "SA004", "미래 시점의 결제 일시는 등록할 수 없습니다."),
     INVALID_REFUND_AMOUNT(400, "SA005", "환불 금액은 0보다 커야 합니다."),
-    FEE_POLICY_NOT_FOUND(500, "FP001", "해당 기간의 수수료 정책을 찾을 수 없습니다.");
+    FEE_POLICY_NOT_FOUND(500, "FP001", "해당 기간의 수수료 정책을 찾을 수 없습니다."),
+    FEE_POLICY_DUPLICATE_DATE(409, "FP002", "해당 날짜의 수수료 정책이 이미 존재합니다.");
 
     private final int httpStatus;
     private final String code;

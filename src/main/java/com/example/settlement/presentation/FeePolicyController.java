@@ -1,5 +1,7 @@
 package com.example.settlement.presentation;
 
+import com.example.settlement.domain.common.exception.BusinessException;
+import com.example.settlement.domain.common.exception.ErrorCode;
 import com.example.settlement.domain.settlement.FeePolicy;
 import com.example.settlement.domain.settlement.FeePolicyRepository;
 import com.example.settlement.presentation.common.ApiResponse;
@@ -12,6 +14,7 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
+import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
@@ -22,9 +25,11 @@ import java.util.List;
 public class FeePolicyController {
 
     private final FeePolicyRepository feePolicyRepository;
+    private final Clock clock;
 
-    public FeePolicyController(FeePolicyRepository feePolicyRepository) {
+    public FeePolicyController(FeePolicyRepository feePolicyRepository, Clock clock) {
         this.feePolicyRepository = feePolicyRepository;
+        this.clock = clock;
     }
 
     @GetMapping
@@ -38,8 +43,11 @@ public class FeePolicyController {
 
     @PostMapping
     public ResponseEntity<ApiResponse<FeePolicyResponse>> create(@Valid @RequestBody CreateFeePolicyRequest req) {
+        if (feePolicyRepository.existsByEffectiveFrom(req.effectiveFrom())) {
+            throw new BusinessException(ErrorCode.FEE_POLICY_DUPLICATE_DATE);
+        }
         FeePolicy saved = feePolicyRepository.save(
-                new FeePolicy(req.feeRate(), req.effectiveFrom(), Instant.now()));
+                new FeePolicy(req.feeRate(), req.effectiveFrom(), Instant.now(clock)));
         return ResponseEntity.ok(ApiResponse.ok(toResponse(saved)));
     }
 
