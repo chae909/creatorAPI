@@ -37,7 +37,7 @@ public class FeePolicyUseCaseImpl implements FeePolicyUseCase {
     @Transactional
     public FeePolicyResponse create(CreateFeePolicyCommand cmd) {
         try {
-            FeePolicy saved = feePolicyRepository.save(
+            FeePolicy saved = feePolicyRepository.saveAndFlush(
                     new FeePolicy(cmd.feeRate(), cmd.effectiveFrom(), Instant.now(clock)));
             return toResponse(saved);
         } catch (DataIntegrityViolationException e) {
