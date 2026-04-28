@@ -8,4 +8,5 @@ import java.util.Optional;
 public interface FeePolicyRepository extends JpaRepository<FeePolicy, Long> {
     Optional<FeePolicy> findTopByEffectiveFromLessThanEqualOrderByEffectiveFromDesc(LocalDate date);
     List<FeePolicy> findAllByOrderByEffectiveFromDesc();
+    boolean existsByEffectiveFrom(LocalDate effectiveFrom);
 }

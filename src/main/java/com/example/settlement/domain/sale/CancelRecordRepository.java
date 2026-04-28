@@ -15,9 +15,8 @@ public interface CancelRecordRepository extends JpaRepository<CancelRecord, Stri
 
     @Query("""
             SELECT c FROM CancelRecord c
-            WHERE c.saleRecordId IN (
-                SELECT s.id FROM SaleRecord s WHERE s.courseId IN :courseIds
-            )
+            JOIN SaleRecord s ON c.saleRecordId = s.id
+            WHERE s.courseId IN :courseIds
             AND c.cancelledAt >= :from AND c.cancelledAt < :end
             """)
     List<CancelRecord> findByCourseIdsAndCancelledAtRange(

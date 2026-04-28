@@ -17,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
+import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -33,18 +34,21 @@ public class SaleUseCaseImpl implements SaleUseCase {
     private final CourseRepository courseRepository;
     private final SaleRecordRepository saleRecordRepository;
     private final CancelRecordRepository cancelRecordRepository;
+    private final Clock clock;
 
     public SaleUseCaseImpl(CourseRepository courseRepository,
                            SaleRecordRepository saleRecordRepository,
-                           CancelRecordRepository cancelRecordRepository) {
+                           CancelRecordRepository cancelRecordRepository,
+                           Clock clock) {
         this.courseRepository = courseRepository;
         this.saleRecordRepository = saleRecordRepository;
         this.cancelRecordRepository = cancelRecordRepository;
+        this.clock = clock;
     }
 
     @Override
     public SaleRecordResponse register(RegisterSaleCommand cmd) {
-        if (cmd.paidAt().isAfter(Instant.now().plusSeconds(60))) {
+        if (cmd.paidAt().isAfter(Instant.now(clock).plusSeconds(60))) {
             throw new BusinessException(ErrorCode.INVALID_PAID_AT);
         }
 
@@ -57,7 +61,7 @@ public class SaleUseCaseImpl implements SaleUseCase {
                 cmd.studentId(),
                 cmd.amount(),
                 cmd.paidAt(),
-                Instant.now()
+                Instant.now(clock)
         );
         saleRecordRepository.save(saleRecord);
 
@@ -95,7 +99,7 @@ public class SaleUseCaseImpl implements SaleUseCase {
                 cmd.saleRecordId(),
                 cmd.refundAmount(),
                 cmd.cancelledAt(),
-                Instant.now()
+                Instant.now(clock)
         );
 
         try {

@@ -24,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
+import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.YearMonth;
@@ -44,6 +45,7 @@ public class SettlementUseCaseImpl implements SettlementUseCase {
     private final FeePolicyRepository feePolicyRepository;
     private final SettlementRepository settlementRepository;
     private final SettlementSaver settlementSaver;
+    private final Clock clock;
 
     public SettlementUseCaseImpl(CreatorRepository creatorRepository,
                                  CourseRepository courseRepository,
@@ -51,7 +53,8 @@ public class SettlementUseCaseImpl implements SettlementUseCase {
                                  CancelRecordRepository cancelRecordRepository,
                                  FeePolicyRepository feePolicyRepository,
                                  SettlementRepository settlementRepository,
-                                 SettlementSaver settlementSaver) {
+                                 SettlementSaver settlementSaver,
+                                 Clock clock) {
         this.creatorRepository = creatorRepository;
         this.courseRepository = courseRepository;
         this.saleRecordRepository = saleRecordRepository;
@@ -59,6 +62,7 @@ public class SettlementUseCaseImpl implements SettlementUseCase {
         this.feePolicyRepository = feePolicyRepository;
         this.settlementRepository = settlementRepository;
         this.settlementSaver = settlementSaver;
+        this.clock = clock;
     }
 
     @Override
@@ -77,7 +81,7 @@ public class SettlementUseCaseImpl implements SettlementUseCase {
         Creator creator = creatorRepository.findById(creatorId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.CREATOR_NOT_FOUND));
         Settlement settlement = findOrCreateSettlement(creatorId, yearMonth);
-        settlement.confirm(Instant.now());
+        settlement.confirm(Instant.now(clock));
         settlementRepository.save(settlement);
         log.info("정산 확정 처리 - creatorId: {}, {}-{}, settlementId: {}",
                 creatorId, settlement.getYear(), settlement.getMonth(), settlement.getId());
@@ -92,7 +96,7 @@ public class SettlementUseCaseImpl implements SettlementUseCase {
         Settlement settlement = settlementRepository
                 .findByCreatorIdAndYearAndMonth(creatorId, ym.getYear(), ym.getMonthValue())
                 .orElseThrow(() -> new BusinessException(ErrorCode.SETTLEMENT_NOT_FOUND));
-        settlement.pay(Instant.now());
+        settlement.pay(Instant.now(clock));
         settlementRepository.save(settlement);
         log.info("정산 지급 처리 - creatorId: {}, {}-{}, payoutAmount: {}",
                 creatorId, settlement.getYear(), settlement.getMonth(), settlement.getPayoutAmount());
@@ -194,7 +198,7 @@ public class SettlementUseCaseImpl implements SettlementUseCase {
                 result.totalSales(), result.totalRefunds(), result.netSales(),
                 feePolicy.getFeeRate(), result.feeAmount(), result.payoutAmount(),
                 result.saleCount(), result.cancelCount(),
-                Instant.now()
+                Instant.now(clock)
         );
     }
 
