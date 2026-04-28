@@ -19,7 +19,10 @@
       "Bash(awk '{for\\(i=1;i<NF;i++\\)printf \"  \"; print $NF}')",
       "Bash(cat)",
       "Read(//tmp/**)",
-      "Bash(awk *)"
+      "Bash(awk *)",
+      "PowerShell(netstat *)",
+      "PowerShell(taskkill *)",
+      "PowerShell(Get-Item *)"
     ]
   }
 }
